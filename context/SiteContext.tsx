@@ -60,6 +60,24 @@ export interface NavLink {
   label: string;
 }
 
+export interface JobPosting {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  employmentType: string;
+  salary: string;
+  description: string;
+  benefits: string[];
+  contact: string;
+  kakaoUrl: string;
+  telegramUrl: string;
+  imageUrl: string;
+  createdAt: string;
+  adStatus: "disconnected" | "connected";
+  adConnectedAt?: string;
+}
+
 export interface Member {
   id: string;
   name: string;
@@ -126,6 +144,12 @@ interface SiteContextType {
   // Support
   supportKakaoUrl: string;
   updateSupportKakaoUrl: (url: string) => void;
+  jobPostings: JobPosting[];
+  addJobPosting: (j: Omit<JobPosting, "id" | "createdAt" | "adStatus">) => void;
+  updateJobPosting: (id: string, updates: Partial<JobPosting>) => void;
+  deleteJobPosting: (id: string) => void;
+  connectJobAd: (id: string) => void;
+  disconnectJobAd: (id: string) => void;
 }
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
@@ -231,6 +255,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   const [memberGrades, setMemberGrades] = useState<MemberGrade[]>(DEFAULT_MEMBER_GRADES);
   const [boards, setBoards] = useState<Board[]>(BOARDS);
   const [supportKakaoUrl, setSupportKakaoUrl] = useState<string>("");
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
 
   useEffect(() => {
     setBrand(load("site_brand", DEFAULT_BRAND));
@@ -250,6 +275,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     setMemberGrades(load("site_member_grades", DEFAULT_MEMBER_GRADES));
     setBoards(load("site_boards", BOARDS));
     setSupportKakaoUrl(load("site_support_kakao_url", ""));
+    setJobPostings(load("site_job_postings", []));
   }, []);
 
   // Brand
@@ -406,6 +432,35 @@ export function SiteProvider({ children }: { children: ReactNode }) {
     save("site_support_kakao_url", url);
   }, []);
 
+  // Job Postings
+  const addJobPosting = useCallback((j: Omit<JobPosting, "id" | "createdAt" | "adStatus">) => {
+    setJobPostings(prev => {
+      const next = [{ ...j, id: `job${Date.now()}`, createdAt: new Date().toISOString().split("T")[0], adStatus: "disconnected" as const }, ...prev];
+      save("site_job_postings", next);
+      return next;
+    });
+  }, []);
+  const updateJobPosting = useCallback((id: string, updates: Partial<JobPosting>) => {
+    setJobPostings(prev => { const next = prev.map(j => j.id === id ? { ...j, ...updates } : j); save("site_job_postings", next); return next; });
+  }, []);
+  const deleteJobPosting = useCallback((id: string) => {
+    setJobPostings(prev => { const next = prev.filter(j => j.id !== id); save("site_job_postings", next); return next; });
+  }, []);
+  const connectJobAd = useCallback((id: string) => {
+    setJobPostings(prev => {
+      const next = prev.map(j => j.id === id ? { ...j, adStatus: "connected" as const, adConnectedAt: new Date().toISOString().split("T")[0] } : j);
+      save("site_job_postings", next);
+      return next;
+    });
+  }, []);
+  const disconnectJobAd = useCallback((id: string) => {
+    setJobPostings(prev => {
+      const next = prev.map(j => j.id === id ? { ...j, adStatus: "disconnected" as const, adConnectedAt: undefined } : j);
+      save("site_job_postings", next);
+      return next;
+    });
+  }, []);
+
   return (
     <SiteContext.Provider value={{
       brand, pageTexts, navLinks, portfolios, posts, members, pendingMembers, boards, industries, gradePermissions, gradeLabels, portfolioTierLabels, memberGrades,
@@ -416,6 +471,7 @@ export function SiteProvider({ children }: { children: ReactNode }) {
       addMemberGrade, updateMemberGrade, removeMemberGrade,
       addIndustry, removeIndustry,
       supportKakaoUrl, updateSupportKakaoUrl,
+      jobPostings, addJobPosting, updateJobPosting, deleteJobPosting, connectJobAd, disconnectJobAd,
     }}>
       {children}
     </SiteContext.Provider>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, ROLE_LABELS, ROLE_COLORS, UserRole } from "@/context/AuthContext";
-import { useSite, Member } from "@/context/SiteContext";
+import { useSite, Member, JobPosting } from "@/context/SiteContext";
 import { Portfolio, Post } from "@/lib/mockData";
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ function SectionHeader({ title, sub }: { title: string; sub?: string }) {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-type Section = "overview" | "indexpage" | "brand" | "pagetexts" | "permissions" | "menu" | "portfolio" | "boards" | "members" | "support";
+type Section = "overview" | "indexpage" | "brand" | "pagetexts" | "permissions" | "menu" | "portfolio" | "boards" | "members" | "support" | "jobs" | "ads";
 const MENU_ITEMS: { id: Section; label: string; icon: string }[] = [
   { id: "overview",    label: "개요",         icon: "◎" },
   { id: "indexpage",   label: "인덱스 페이지", icon: "⊞" },
@@ -77,6 +77,8 @@ const MENU_ITEMS: { id: Section; label: string; icon: string }[] = [
   { id: "boards",      label: "게시판 관리",   icon: "◻" },
   { id: "members",     label: "회원 관리",     icon: "◉" },
   { id: "support",     label: "고객센터",      icon: "◎" },
+  { id: "jobs",        label: "채용관리",       icon: "◑" },
+  { id: "ads",         label: "광고관리",       icon: "◈" },
 ];
 
 function Sidebar({ active, onChange }: { active: Section; onChange: (s: Section) => void }) {
@@ -1219,6 +1221,166 @@ function SupportSection({ toast }: { toast: (m: string) => void }) {
   );
 }
 
+// ─── 채용관리 ────────────────────────────────────────────────────────────────
+
+const EJ = { title: "", company: "", location: "", employmentType: "", salary: "", description: "", benefits: "", contact: "", kakaoUrl: "", telegramUrl: "", imageUrl: "" };
+
+function JobsSection({ toast }: { toast: (m: string) => void }) {
+  const { jobPostings, addJobPosting, updateJobPosting, deleteJobPosting } = useSite();
+  const [modal, setModal] = useState<"add" | JobPosting | null>(null);
+  const [form, setForm] = useState(EJ);
+
+  const open = (j?: JobPosting) => {
+    if (j) setForm({ title: j.title, company: j.company, location: j.location, employmentType: j.employmentType, salary: j.salary, description: j.description, benefits: j.benefits.join(", "), contact: j.contact, kakaoUrl: j.kakaoUrl, telegramUrl: j.telegramUrl, imageUrl: j.imageUrl });
+    else setForm(EJ);
+    setModal(j ?? "add");
+  };
+
+  const save = () => {
+    const benefits = form.benefits.split(",").map(t => t.trim()).filter(Boolean);
+    const data = { ...form, benefits };
+    if (modal === "add") { addJobPosting(data); toast("채용공고 등록 완료 — 광고관리에서 연결하세요"); }
+    else { updateJobPosting((modal as JobPosting).id, data); toast("채용공고 수정 완료"); }
+    setModal(null);
+  };
+
+  const del = (id: string) => { if (!confirm("삭제하시겠습니까?")) return; deleteJobPosting(id); toast("삭제 완료"); };
+  const f = (k: keyof typeof form) => (v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  return (
+    <div>
+      <SectionHeader title="채용관리" sub={`총 ${jobPostings.length}개 · 등록 후 광고관리에서 연결해야 사이트에 노출됩니다.`} />
+      <div style={{ marginBottom: 18 }}>
+        <Btn onClick={() => open()}>+ 채용공고 등록</Btn>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid #2A2A2A" }}>
+              {["공고 제목", "회사명", "고용형태", "광고 상태", "등록일", "액션"].map(h => (
+                <th key={h} style={{ color: "#4A4A4A", fontSize: 11, padding: "10px 14px", textAlign: "left", fontWeight: 400 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {jobPostings.length === 0 && (
+              <tr><td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "#3A3A3A", fontSize: 12 }}>등록된 채용공고가 없습니다.</td></tr>
+            )}
+            {jobPostings.map((j, i) => (
+              <tr key={j.id} style={{ borderBottom: "1px solid #181818", background: i % 2 === 0 ? "#141414" : "#111111" }}>
+                <td style={{ padding: "12px 14px", color: "#F5F0E8", fontSize: 13 }}>{j.title}</td>
+                <td style={{ padding: "12px 14px", color: "#7A7A6A", fontSize: 12 }}>{j.company}</td>
+                <td style={{ padding: "12px 14px", color: "#7A7A6A", fontSize: 12 }}>{j.employmentType || "—"}</td>
+                <td style={{ padding: "12px 14px" }}>
+                  <span style={{ padding: "3px 10px", border: `1px solid ${j.adStatus === "connected" ? "#3A6A3A" : "#6A4A1A"}`, color: j.adStatus === "connected" ? "#80C880" : "#E8A060", fontSize: 11 }}>
+                    {j.adStatus === "connected" ? "연결됨" : "연결 안됨"}
+                  </span>
+                </td>
+                <td style={{ padding: "12px 14px", color: "#3A3A3A", fontSize: 11 }}>{j.createdAt}</td>
+                <td style={{ padding: "12px 14px" }}>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <Btn variant="ghost" onClick={() => open(j)}>수정</Btn>
+                    <Btn variant="danger" onClick={() => del(j.id)}>삭제</Btn>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <AnimatePresence>
+        {modal !== null && (
+          <Modal title={modal === "add" ? "채용공고 등록" : "채용공고 수정"} onClose={() => setModal(null)}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <Field label="공고 제목 *"><Input value={form.title} onChange={f("title")} placeholder="○○○ 채용" /></Field>
+              <Field label="회사명 *"><Input value={form.company} onChange={f("company")} placeholder="회사명" /></Field>
+              <Field label="위치"><Input value={form.location} onChange={f("location")} placeholder="서울 강남" /></Field>
+              <Field label="고용형태"><Input value={form.employmentType} onChange={f("employmentType")} placeholder="정규직 / 계약직 / 프리랜서" /></Field>
+              <Field label="급여조건"><Input value={form.salary} onChange={f("salary")} placeholder="면접 후 협의" /></Field>
+              <Field label="연락처"><Input value={form.contact} onChange={f("contact")} placeholder="010-0000-0000" /></Field>
+            </div>
+            <Field label="공고 내용"><Textarea value={form.description} onChange={f("description")} rows={4} placeholder="업무 내용, 자격 조건 등 상세 내용" /></Field>
+            <Field label="편의사항 (쉼표 구분)"><Input value={form.benefits} onChange={f("benefits")} placeholder="4대보험, 주5일, 식대 지원" /></Field>
+            <Field label="카카오톡 채팅 URL"><Input value={form.kakaoUrl} onChange={f("kakaoUrl")} placeholder="https://open.kakao.com/..." /></Field>
+            <Field label="텔레그램 URL"><Input value={form.telegramUrl} onChange={f("telegramUrl")} placeholder="https://t.me/..." /></Field>
+            <Field label="대표 이미지 URL"><Input value={form.imageUrl} onChange={f("imageUrl")} placeholder="https://..." /></Field>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+              <Btn variant="ghost" onClick={() => setModal(null)}>취소</Btn>
+              <Btn onClick={save} disabled={!form.title || !form.company}>저장하기</Btn>
+            </div>
+          </Modal>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── 광고관리 ────────────────────────────────────────────────────────────────
+
+function AdsSection({ toast }: { toast: (m: string) => void }) {
+  const { jobPostings, connectJobAd, disconnectJobAd } = useSite();
+  const connected = jobPostings.filter(j => j.adStatus === "connected");
+  const disconnected = jobPostings.filter(j => j.adStatus === "disconnected");
+
+  return (
+    <div>
+      <SectionHeader title="광고관리" sub="채용공고와 광고 슬롯을 연결합니다. 연결된 공고만 사이트에 노출됩니다." />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "#1A1A1A", marginBottom: 32 }}>
+        <div style={{ background: "#141414", padding: "22px 24px" }}>
+          <div style={{ color: "#80C880", fontSize: 32, fontWeight: 300, marginBottom: 6 }}>{connected.length}</div>
+          <div style={{ color: "#5A5A4A", fontSize: 12, letterSpacing: "0.08em" }}>연결된 광고</div>
+        </div>
+        <div style={{ background: "#141414", padding: "22px 24px" }}>
+          <div style={{ color: "#E8A060", fontSize: 32, fontWeight: 300, marginBottom: 6 }}>{disconnected.length}</div>
+          <div style={{ color: "#5A5A4A", fontSize: 12, letterSpacing: "0.08em" }}>연결 안됨</div>
+        </div>
+      </div>
+
+      {jobPostings.length === 0 && (
+        <div style={{ textAlign: "center", padding: "60px", color: "#3A3A3A", background: "#141414", border: "1px solid #1A1A1A", fontSize: 13 }}>
+          채용관리에서 공고를 먼저 등록해주세요.
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {jobPostings.map(j => (
+          <div key={j.id} style={{ background: "#141414", border: `1px solid ${j.adStatus === "connected" ? "#2A4A2A" : "#3A2A1A"}`, padding: "18px 22px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: j.adStatus === "connected" ? "#4CAF50" : "#E8903A", flexShrink: 0 }} />
+
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <p style={{ color: "#F5F0E8", fontSize: 14, marginBottom: 3 }}>{j.title}</p>
+              <p style={{ color: "#5A5A4A", fontSize: 12 }}>
+                {j.company}
+                {j.location && ` · ${j.location}`}
+                {j.employmentType && ` · ${j.employmentType}`}
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <span style={{ padding: "4px 12px", border: `1px solid ${j.adStatus === "connected" ? "#3A6A3A" : "#6A4A1A"}`, color: j.adStatus === "connected" ? "#80C880" : "#E8A060", fontSize: 12, fontWeight: 600, letterSpacing: "0.05em" }}>
+                {j.adStatus === "connected" ? "연결됨" : "연결이 안되었다"}
+              </span>
+              {j.adStatus === "connected" && j.adConnectedAt && (
+                <span style={{ color: "#3A3A3A", fontSize: 10 }}>연결일: {j.adConnectedAt}</span>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              {j.adStatus === "disconnected" ? (
+                <Btn onClick={() => { connectJobAd(j.id); toast(`"${j.title}" 광고 연결 완료`); }}>연결하기</Btn>
+              ) : (
+                <Btn variant="ghost" onClick={() => { disconnectJobAd(j.id); toast(`"${j.title}" 광고 연결 해제`); }}>연결 해제</Btn>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -1251,6 +1413,8 @@ export default function AdminPage() {
           {section === "boards"    && <BoardsSection toast={setToastMsg} />}
           {section === "members"   && <MembersSection toast={setToastMsg} />}
           {section === "support"   && <SupportSection toast={setToastMsg} />}
+          {section === "jobs"       && <JobsSection toast={setToastMsg} />}
+          {section === "ads"        && <AdsSection toast={setToastMsg} />}
         </motion.div>
       </main>
       <AnimatePresence>
