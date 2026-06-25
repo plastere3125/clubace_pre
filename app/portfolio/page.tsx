@@ -11,6 +11,18 @@ import FloatingSupport from "@/components/FloatingSupport";
 import { Portfolio } from "@/lib/mockData";
 import { useSite } from "@/context/SiteContext";
 
+// ── 모바일 감지 훅 ────────────────────────────────────────────────────────────
+function useIsMobile(bp = 768) {
+  const [v, setV] = useState(false);
+  useEffect(() => {
+    const fn = () => setV(window.innerWidth <= bp);
+    fn();
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, [bp]);
+  return v;
+}
+
 // ── 자동 순환 훅 ──────────────────────────────────────────────────────────────
 const ROTATE_MS = 60000; // 1분마다 자동 전환
 
@@ -313,6 +325,9 @@ interface TierSectionProps {
 function TierSection({ label, items, cols, pageSize, cardSize, onSelect, accentColor }: TierSectionProps) {
   const { displayed, page, totalPages, setPage } = useAutoRotate(items, pageSize);
   const touchX = useRef<number | null>(null);
+  const isMobile = useIsMobile();
+  const effectiveCols = isMobile ? 2 : cols;
+  const effectiveGap = isMobile ? 8 : 16;
   if (items.length === 0) return null;
 
   const onTouchStart = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; };
@@ -343,8 +358,7 @@ function TierSection({ label, items, cols, pageSize, cardSize, onSelect, accentC
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.35 }}
-          className={`tier-grid-${cols}`}
-          style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 16 }}
+          style={{ display: "grid", gridTemplateColumns: `repeat(${effectiveCols}, 1fr)`, gap: effectiveGap }}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
@@ -424,6 +438,7 @@ const GRID2_SIZE = 6;
 function Tier2Section({ label, items, onSelect }: { label: string; items: Portfolio[]; onSelect: (p: Portfolio) => void }) {
   const { displayed: gridItems, page, totalPages, setPage } = useAutoRotate(items, GRID2_SIZE);
   const touchX = useRef<number | null>(null);
+  const isMobile = useIsMobile();
 
   if (items.length === 0) return null;
 
@@ -450,7 +465,7 @@ function Tier2Section({ label, items, onSelect }: { label: string; items: Portfo
       </div>
 
       {/* 좌우 레이아웃 */}
-      <div className="tier2-layout" style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }}>
+      <div className="tier2-layout" style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 300px", gap: 20 }}>
 
         {/* 좌측: 카드 그리드 */}
         <AnimatePresence mode="wait">
@@ -460,8 +475,7 @@ function Tier2Section({ label, items, onSelect }: { label: string; items: Portfo
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.35 }}
-            className="tier2-card-grid"
-            style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, alignContent: "start", minWidth: 0 }}
+            style={{ display: "grid", gridTemplateColumns: `repeat(${isMobile ? 2 : 3}, 1fr)`, gap: isMobile ? 8 : 12, alignContent: "start", minWidth: 0 }}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
@@ -471,8 +485,8 @@ function Tier2Section({ label, items, onSelect }: { label: string; items: Portfo
           </motion.div>
         </AnimatePresence>
 
-        {/* 우측: 써머리 박스 */}
-        <div style={{ display: "grid", gridTemplateRows: "auto 1fr auto", border: "1px solid #1A1A1A", borderRadius: 2, background: "#0E0E0E" }}>
+        {/* 우측: 써머리 박스 (모바일 숨김) */}
+        {!isMobile && <div style={{ display: "grid", gridTemplateRows: "auto 1fr auto", border: "1px solid #1A1A1A", borderRadius: 2, background: "#0E0E0E" }}>
           <div style={{ padding: "13px 16px", borderBottom: "1px solid #1E1E1E", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ color: "#B0A898", fontSize: 12, letterSpacing: "0.1em" }}>{label} 목록</span>
             <span style={{ color: "#6A6A5A", fontSize: 12 }}>{items.length}건</span>
@@ -507,7 +521,7 @@ function Tier2Section({ label, items, onSelect }: { label: string; items: Portfo
               {page + 1} / {totalPages} 페이지
             </span>
           </div>
-        </div>
+        </div>}
       </div>
 
       <style>{`
