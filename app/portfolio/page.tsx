@@ -323,11 +323,11 @@ interface TierSectionProps {
 }
 
 function TierSection({ label, items, cols, pageSize, cardSize, onSelect, accentColor }: TierSectionProps) {
-  const { displayed, page, totalPages, setPage } = useAutoRotate(items, pageSize);
-  const touchX = useRef<number | null>(null);
   const isMobile = useIsMobile();
   const effectiveCols = isMobile ? 2 : cols;
-  const effectiveGap = isMobile ? 8 : 16;
+  const effectivePageSize = isMobile ? 2 : pageSize;
+  const { displayed, page, totalPages, setPage } = useAutoRotate(items, effectivePageSize);
+  const touchX = useRef<number | null>(null);
   if (items.length === 0) return null;
 
   const onTouchStart = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; };
@@ -358,7 +358,7 @@ function TierSection({ label, items, cols, pageSize, cardSize, onSelect, accentC
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.35 }}
-          style={{ display: "grid", gridTemplateColumns: `repeat(${effectiveCols}, 1fr)`, gap: effectiveGap }}
+          style={{ display: "grid", gridTemplateColumns: `repeat(${effectiveCols}, 1fr)`, gap: isMobile ? 12 : 16 }}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
@@ -436,9 +436,11 @@ function BoardTierSection({ label, items, onSelect }: { label: string; items: Po
 const GRID2_SIZE = 6;
 
 function Tier2Section({ label, items, onSelect }: { label: string; items: Portfolio[]; onSelect: (p: Portfolio) => void }) {
-  const { displayed: gridItems, page, totalPages, setPage } = useAutoRotate(items, GRID2_SIZE);
-  const touchX = useRef<number | null>(null);
   const isMobile = useIsMobile();
+  const effectivePageSize = isMobile ? 2 : GRID2_SIZE;
+  const effectiveGridCols = isMobile ? 2 : 3;
+  const { displayed: gridItems, page, totalPages, setPage } = useAutoRotate(items, effectivePageSize);
+  const touchX = useRef<number | null>(null);
 
   if (items.length === 0) return null;
 
@@ -475,7 +477,7 @@ function Tier2Section({ label, items, onSelect }: { label: string; items: Portfo
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.35 }}
-            style={{ display: "grid", gridTemplateColumns: `repeat(${isMobile ? 2 : 3}, 1fr)`, gap: isMobile ? 8 : 12, alignContent: "start", minWidth: 0 }}
+            style={{ display: "grid", gridTemplateColumns: `repeat(${effectiveGridCols}, 1fr)`, gap: 12, alignContent: "start", minWidth: 0 }}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
