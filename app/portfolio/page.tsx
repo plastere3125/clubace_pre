@@ -324,8 +324,8 @@ interface TierSectionProps {
 
 function TierSection({ label, items, cols, pageSize, cardSize, onSelect, accentColor }: TierSectionProps) {
   const isMobile = useIsMobile();
-  const effectiveCols = isMobile ? 2 : cols;
-  const effectivePageSize = isMobile ? 2 : pageSize;
+  const effectiveCols = isMobile ? 1 : cols;       // 모바일: 1열 (풀 너비)
+  const effectivePageSize = isMobile ? 2 : pageSize; // 모바일: 2행씩 표시
   const { displayed, page, totalPages, setPage } = useAutoRotate(items, effectivePageSize);
   const touchX = useRef<number | null>(null);
   if (items.length === 0) return null;
@@ -438,7 +438,7 @@ const GRID2_SIZE = 6;
 function Tier2Section({ label, items, onSelect }: { label: string; items: Portfolio[]; onSelect: (p: Portfolio) => void }) {
   const isMobile = useIsMobile();
   const effectivePageSize = isMobile ? 2 : GRID2_SIZE;
-  const effectiveGridCols = isMobile ? 2 : 3;
+  const effectiveGridCols = isMobile ? 1 : 3; // 모바일: 1열 (풀 너비)
   const { displayed: gridItems, page, totalPages, setPage } = useAutoRotate(items, effectivePageSize);
   const touchX = useRef<number | null>(null);
 
