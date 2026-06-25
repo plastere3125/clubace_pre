@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
@@ -39,24 +39,44 @@ function RotateIndicator({
   page: number; totalPages: number; setPage: (p: number) => void; accentColor?: string;
 }) {
   if (totalPages <= 1) return null;
+  const btnStyle: React.CSSProperties = {
+    width: 32, height: 32, border: "1px solid #2A2A2A", borderRadius: 2,
+    background: "transparent", color: "#6A6A5A", cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 18, lineHeight: 1, flexShrink: 0, transition: "all 0.2s",
+    fontFamily: "inherit",
+  };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      {Array.from({ length: totalPages }).map((_, i) => (
-        <button
-          key={i}
-          onClick={() => setPage(i)}
-          style={{
-            width: i === page ? 18 : 6,
-            height: 6,
-            borderRadius: 3,
-            background: i === page ? accentColor : "#2E2E2E",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-            transition: "all 0.35s ease",
-          }}
-        />
-      ))}
+    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+      <button
+        onClick={() => setPage((page - 1 + totalPages) % totalPages)}
+        style={btnStyle}
+        aria-label="이전"
+      >‹</button>
+      <div className="rotate-dots" style={{ display: "flex", alignItems: "center" }}>
+        {Array.from({ length: totalPages }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setPage(i)}
+            aria-label={`${i + 1}페이지`}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "13px 5px", display: "flex", alignItems: "center" }}
+          >
+            <div style={{
+              width: i === page ? 18 : 6, height: 6, borderRadius: 3,
+              background: i === page ? accentColor : "#2E2E2E",
+              transition: "all 0.35s ease",
+            }} />
+          </button>
+        ))}
+      </div>
+      <span className="rotate-counter" style={{ display: "none", color: "#6A6A5A", fontSize: 12, padding: "0 8px", minWidth: 44, textAlign: "center" }}>
+        {page + 1}/{totalPages}
+      </span>
+      <button
+        onClick={() => setPage((page + 1) % totalPages)}
+        style={btnStyle}
+        aria-label="다음"
+      >›</button>
     </div>
   );
 }
@@ -123,7 +143,7 @@ export default function PortfolioPage() {
       <main style={{ paddingTop: 80 }}>
 
         {/* Page header */}
-        <section style={{ padding: "52px 40px 36px", borderBottom: "1px solid #1E1E1E" }}>
+        <section className="portfolio-header" style={{ padding: "52px 40px 36px", borderBottom: "1px solid #1E1E1E" }}>
           <div style={{ maxWidth: 1400, margin: "0 auto" }}>
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
               <p style={{ color: "#C9A84C", fontSize: 11, letterSpacing: "0.3em", marginBottom: 12 }}>{pageTexts.portfolioLabel}</p>
@@ -135,7 +155,7 @@ export default function PortfolioPage() {
           </div>
         </section>
 
-        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 40px 80px" }}>
+        <div className="portfolio-main" style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 40px 80px" }}>
 
           {/* Filters */}
           <motion.div
@@ -231,16 +251,42 @@ export default function PortfolioPage() {
       </main>
 
       <style>{`
+        @keyframes rotateProgress {
+          from { width: 0%; }
+          to { width: 100%; }
+        }
+
+        /* ── 카드 그리드 반응형 ── */
         @media (max-width: 1200px) {
           .tier-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
           .tier-grid-4 { grid-template-columns: repeat(3, 1fr) !important; }
+          .tier2-card-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
         @media (max-width: 768px) {
           .tier-grid-3 { grid-template-columns: repeat(1, 1fr) !important; }
           .tier-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+          .tier2-card-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+          /* 좌우 패딩 축소 */
+          .portfolio-header { padding: 32px 20px 24px !important; }
+          .portfolio-main { padding: 24px 16px 60px !important; }
+
+          /* 섹션 헤더 구분선 숨김 → 타이틀+버튼 한 줄 유지 */
+          .tier-section-divider { display: none !important; }
+          .tier-section-header { gap: 10px !important; }
+
+          /* 도트 숨기고 X/Y 카운터 표시 */
+          .rotate-dots { display: none !important; }
+          .rotate-counter { display: inline !important; }
+
+          /* 게시판 지역 열 숨김 */
+          .board-col-location { display: none !important; }
+          .board-row { grid-template-columns: 2fr 1fr !important; }
         }
         @media (max-width: 480px) {
           .tier-grid-4 { grid-template-columns: repeat(1, 1fr) !important; }
+          .tier2-card-grid { grid-template-columns: repeat(1, 1fr) !important; }
+          .portfolio-header { padding: 24px 16px 20px !important; }
         }
       `}</style>
 
@@ -265,17 +311,26 @@ interface TierSectionProps {
 
 function TierSection({ label, items, cols, pageSize, cardSize, onSelect, accentColor }: TierSectionProps) {
   const { displayed, page, totalPages, setPage } = useAutoRotate(items, pageSize);
+  const touchX = useRef<number | null>(null);
   if (items.length === 0) return null;
+
+  const onTouchStart = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchX.current === null) return;
+    const diff = touchX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) setPage(diff > 0 ? (page + 1) % totalPages : (page - 1 + totalPages) % totalPages);
+    touchX.current = null;
+  };
 
   return (
     <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       {/* 헤더 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+      <div className="tier-section-header" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
         <h2 style={{ color: "#F0EBE0", fontSize: 20, fontWeight: 400, fontFamily: "inherit", letterSpacing: "0.04em" }}>
           {label}
         </h2>
         <span style={{ color: "#6A6A5A", fontSize: 13 }}>{items.length}개</span>
-        <div style={{ flex: 1, height: 1, background: "#222222" }} />
+        <div className="tier-section-divider" style={{ flex: 1, height: 1, background: "#222222" }} />
         <RotateIndicator page={page} totalPages={totalPages} setPage={setPage} accentColor={accentColor} />
       </div>
 
@@ -289,6 +344,8 @@ function TierSection({ label, items, cols, pageSize, cardSize, onSelect, accentC
           transition={{ duration: 0.35 }}
           className={`tier-grid-${cols}`}
           style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 16 }}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
         >
           {displayed.map((p, i) => (
             <PortfolioCard key={p.id} portfolio={p} index={i} size={cardSize} onClick={onSelect} />
@@ -311,12 +368,12 @@ function BoardTierSection({ label, items, onSelect }: { label: string; items: Po
   return (
     <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       {/* 헤더 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+      <div className="tier-section-header" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
         <h2 style={{ color: "#F0EBE0", fontSize: 20, fontWeight: 400, fontFamily: "inherit", letterSpacing: "0.04em" }}>
           {label}
         </h2>
         <span style={{ color: "#6A6A5A", fontSize: 13 }}>{items.length}개</span>
-        <div style={{ flex: 1, height: 1, background: "#222222" }} />
+        <div className="tier-section-divider" style={{ flex: 1, height: 1, background: "#222222" }} />
         <RotateIndicator page={page} totalPages={totalPages} setPage={setPage} accentColor="#7A7A6A" />
       </div>
 
@@ -330,15 +387,16 @@ function BoardTierSection({ label, items, onSelect }: { label: string; items: Po
           transition={{ duration: 0.3 }}
           style={{ border: "1px solid #1E1E1E", borderRadius: 2, overflow: "hidden" }}
         >
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", padding: "11px 20px", background: "#111111", borderBottom: "1px solid #1E1E1E" }}>
-            {["사업명", "업종", "지역"].map((h) => (
-              <span key={h} style={{ color: "#7A7A6A", fontSize: 12, letterSpacing: "0.1em" }}>{h}</span>
-            ))}
+          <div className="board-row" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", padding: "11px 20px", background: "#111111", borderBottom: "1px solid #1E1E1E" }}>
+            <span style={{ color: "#7A7A6A", fontSize: 12, letterSpacing: "0.1em" }}>사업명</span>
+            <span style={{ color: "#7A7A6A", fontSize: 12, letterSpacing: "0.1em" }}>업종</span>
+            <span className="board-col-location" style={{ color: "#7A7A6A", fontSize: 12, letterSpacing: "0.1em" }}>지역</span>
           </div>
           {displayed.map((p, i) => (
             <div
               key={p.id}
               onClick={() => onSelect(p)}
+              className="board-row"
               style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", padding: "14px 20px", borderBottom: i < displayed.length - 1 ? "1px solid #181818" : "none", cursor: "pointer", transition: "background 0.15s", alignItems: "center" }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#141414"; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
@@ -348,7 +406,7 @@ function BoardTierSection({ label, items, onSelect }: { label: string; items: Po
                 <div style={{ color: "#6A6A5A", fontSize: 12 }}>{p.company}</div>
               </div>
               <span style={{ color: "#8A8A7A", fontSize: 13 }}>{p.industry}</span>
-              <span style={{ color: "#8A8A7A", fontSize: 13 }}>{p.location}</span>
+              <span className="board-col-location" style={{ color: "#8A8A7A", fontSize: 13 }}>{p.location}</span>
             </div>
           ))}
         </motion.div>
@@ -363,23 +421,30 @@ function BoardTierSection({ label, items, onSelect }: { label: string; items: Po
 const GRID2_SIZE = 6;
 
 function Tier2Section({ label, items, onSelect }: { label: string; items: Portfolio[]; onSelect: (p: Portfolio) => void }) {
-  // 좌측 카드와 우측 써머리는 같은 page를 공유 (sync)
   const { displayed: gridItems, page, totalPages, setPage } = useAutoRotate(items, GRID2_SIZE);
+  const touchX = useRef<number | null>(null);
 
   if (items.length === 0) return null;
 
-  // 우측 써머리: 현재 페이지의 같은 항목 중 최대 4개
   const summaryItems = gridItems.slice(0, 4);
+
+  const onTouchStart = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchX.current === null) return;
+    const diff = touchX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) setPage(diff > 0 ? (page + 1) % totalPages : (page - 1 + totalPages) % totalPages);
+    touchX.current = null;
+  };
 
   return (
     <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       {/* 헤더 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+      <div className="tier-section-header" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
         <h2 style={{ color: "#F0EBE0", fontSize: 20, fontWeight: 400, fontFamily: "inherit", letterSpacing: "0.04em" }}>
           {label}
         </h2>
         <span style={{ color: "#6A6A5A", fontSize: 13 }}>{items.length}개</span>
-        <div style={{ flex: 1, height: 1, background: "#222222" }} />
+        <div className="tier-section-divider" style={{ flex: 1, height: 1, background: "#222222" }} />
         <RotateIndicator page={page} totalPages={totalPages} setPage={setPage} accentColor="#B0B0A0" />
       </div>
 
@@ -394,7 +459,10 @@ function Tier2Section({ label, items, onSelect }: { label: string; items: Portfo
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.35 }}
+            className="tier2-card-grid"
             style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, alignContent: "start", minWidth: 0 }}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
           >
             {gridItems.map((p, i) => (
               <PortfolioCard key={p.id} portfolio={p} index={i} size="medium" onClick={onSelect} />
@@ -444,6 +512,12 @@ function Tier2Section({ label, items, onSelect }: { label: string; items: Portfo
       <style>{`
         @media (max-width: 1024px) {
           .tier2-layout { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 768px) {
+          .tier-section-header { gap: 10px !important; }
+          .tier-section-divider { display: none !important; }
+          .rotate-dots { display: none !important; }
+          .rotate-counter { display: inline !important; }
         }
       `}</style>
     </motion.section>
