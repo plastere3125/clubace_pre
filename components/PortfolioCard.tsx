@@ -57,7 +57,7 @@ export default function PortfolioCard({ portfolio, onClick, index, size = "mediu
       transition={{ duration: 0.4, delay: index * 0.05 }}
       whileHover={{ y: -4 }}
       onClick={() => onClick(portfolio)}
-      className="card-glow"
+      className={`card-glow portfolio-card-${size}`}
       style={{
         background: "linear-gradient(145deg, #1C1C1C, #151515)",
         border: "1px solid #2E2E2E",

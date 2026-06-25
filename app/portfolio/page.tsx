@@ -263,13 +263,14 @@ export default function PortfolioPage() {
           .tier2-card-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
         @media (max-width: 768px) {
-          .tier-grid-3 { grid-template-columns: repeat(1, 1fr) !important; }
+          /* 썸네일 있는 채용공고 전체 2열 (1×2 배열, 화면 꽉 채움) */
+          .tier-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
           .tier-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
           .tier2-card-grid { grid-template-columns: repeat(2, 1fr) !important; }
 
           /* 좌우 패딩 축소 */
           .portfolio-header { padding: 32px 20px 24px !important; }
-          .portfolio-main { padding: 24px 16px 60px !important; }
+          .portfolio-main { padding: 24px 10px 60px !important; }
 
           /* 섹션 헤더 구분선 숨김 → 타이틀+버튼 한 줄 유지 */
           .tier-section-divider { display: none !important; }
@@ -284,9 +285,9 @@ export default function PortfolioPage() {
           .board-row { grid-template-columns: 2fr 1fr !important; }
         }
         @media (max-width: 480px) {
-          .tier-grid-4 { grid-template-columns: repeat(1, 1fr) !important; }
-          .tier2-card-grid { grid-template-columns: repeat(1, 1fr) !important; }
-          .portfolio-header { padding: 24px 16px 20px !important; }
+          .tier-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+          .tier2-card-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .portfolio-header { padding: 24px 10px 20px !important; }
         }
       `}</style>
 

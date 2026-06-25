@@ -86,3 +86,15 @@ html, body {
 .input-premium::placeholder { color: #5A5A52; }
 
 ::selection { background: #C9A84C30; color: #E8CC7A; }
+
+/* ── 모바일 2열 카드 최적화 (모바일 전용) ── */
+@media (max-width: 768px) {
+  .portfolio-card-medium .card-content,
+  .portfolio-card-tiny .card-content {
+    padding: 8px 10px 10px !important;
+  }
+  .portfolio-card-medium,
+  .portfolio-card-tiny {
+    font-size: 11px;
+  }
+}
